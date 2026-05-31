@@ -1,33 +1,22 @@
 import mongoose from 'mongoose';
 import { config } from '../config.js';
 
-let memoryServer = null;
-
 /**
- * Connect to MongoDB. Uses MONGODB_URI when provided (Atlas/Docker),
- * otherwise spins up an in-process mongodb-memory-server so the app
- * runs with zero setup (`npm run dev` just works).
+ * Connect to MongoDB via MONGODB_URI (Atlas / any Mongo server).
+ * No in-memory fallback — set MONGODB_URI in the environment.
  */
 export async function connectDb() {
-  let uri = config.mongoUri;
-  let mode = 'external';
-
+  const uri = config.mongoUri;
   if (!uri) {
-    const { MongoMemoryServer } = await import('mongodb-memory-server');
-    memoryServer = await MongoMemoryServer.create();
-    uri = memoryServer.getUri();
-    mode = 'in-memory';
+    throw new Error('MONGODB_URI is not set. Provide your MongoDB connection string (e.g. Atlas).');
   }
-
   mongoose.set('strictQuery', true);
   await mongoose.connect(uri, { dbName: 'car_dekho' });
-  console.log(`[db] connected (${mode})`);
-  return mode;
+  console.log('[db] connected');
 }
 
 export async function disconnectDb() {
   await mongoose.disconnect();
-  if (memoryServer) await memoryServer.stop();
 }
 
 export function dbReady() {

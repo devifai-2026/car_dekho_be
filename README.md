@@ -12,14 +12,15 @@ cons, grounded entirely in real catalog data.
 ## Run it (one command)
 
 ```bash
-cp .env.example server/.env      # then put your GEMINI_API_KEY in server/.env
+cp .env.example server/.env      # then set GEMINI_API_KEY and MONGODB_URI in server/.env
 npm install
 npm run dev                      # server :4000 (Express+Socket.IO) + client :5173 (Vite)
 ```
 
-Open **http://localhost:5173**. No MongoDB install needed — an in-process `mongodb-memory-server`
-boots and seeds ~50 cars automatically (incl. a luxury tier: Audi, BMW, Mercedes, etc.). To use Atlas/Docker instead, set `MONGODB_URI` in
-`server/.env`. Without a Gemini key the app still works (see *Resilience* below).
+Open **http://localhost:5173**. Set **`MONGODB_URI`** (e.g. a free MongoDB Atlas cluster) in
+`server/.env` — the app connects directly to it and seeds ~50 cars on first boot (incl. a luxury tier:
+Audi, BMW, Mercedes, etc.) when the collection is empty. Without a Gemini key the app still works (see
+*Resilience* below).
 
 Useful endpoints: `GET /api/health`, `GET /api/cars/:sku`, `GET /api/llm-logs` (token accounting).
 
@@ -120,7 +121,7 @@ grounded shortlist, with a visible `degraded` notice. The demo never hard-fails.
 ```
 server/src/
   index.js            http + Socket.IO + routes
-  db/connect.js       memory-server default, MONGODB_URI override
+  db/connect.js       connects to MONGODB_URI (Atlas)
   models/Car.js       cars schema (~40 seeded Indian models)
   models/LlmLog.js    -> collection "Car_Dekho_LLM_Logs"
   data/cars.seed.json curated demo dataset (pre-written review summaries)
@@ -161,9 +162,9 @@ frontend origin via `CORS_ORIGIN`.
 
 **Backend → Render** (repo root = `server/`, uses `render.yaml`):
 1. New Web Service from the backend repo (or "Blueprint" to read `render.yaml`).
-2. Set env vars: `GEMINI_API_KEY` (secret), `MONGODB_URI` (your Atlas URI — the in-memory DB is
-   ephemeral on a dyno), `GEMINI_MODEL` (e.g. `gemini-2.0-flash`), and `CORS_ORIGIN` (your Netlify URL).
-   `PORT` is injected by Render automatically. Build `npm install`, start `npm start`.
+2. Set env vars: `GEMINI_API_KEY` (secret), `MONGODB_URI` (your Atlas connection string — **required**),
+   `GEMINI_MODEL` (lowercase, e.g. `gemini-2.5-flash`), and `CORS_ORIGIN` (your frontend URL).
+   `PORT` is injected by the platform automatically. Build `npm install`, start `npm start`.
 3. Note the service URL, e.g. `https://car-dekho-be.onrender.com`.
 
 **Frontend → Netlify** (repo root = `client/`, uses `netlify.toml`):
@@ -179,8 +180,10 @@ frontend origin via `CORS_ORIGIN`.
 - **"Loader never finishes"** is almost always a cold start (Render free dynos sleep). The frontend
   pings `/api/health` on load to warm it, and gives up after 90s with a retry. An external uptime
   pinger (e.g. cron-job.org → `/api/health` every ~10 min) avoids cold starts entirely.
-- **"My Atlas is empty"** → `MONGODB_URI` isn't set on Render, so the backend used in-memory Mongo.
-  Set it to your Atlas URI; `seedIfEmpty()` populates `car_dekho.cars` (52 docs) on first boot.
+- **"My Atlas is empty"** → `MONGODB_URI` isn't set (the app requires it). Set it to your Atlas
+  connection string; `seedIfEmpty()` populates `car_dekho.cars` (~52 docs) on first boot.
+- **`GEMINI_MODEL` must be lowercase** (`gemini-2.5-flash`). An uppercase value is an invalid model ID
+  and every call 404s (results fall back to the deterministic, "degraded" path).
 
 ---
 
@@ -213,8 +216,8 @@ whether the core promise lands.
 
 - **Why MERN:** it's the stack I'm most confident and fast in, which matters in a tight time box. A
   SQL database would work equally well for this data, but I chose **MongoDB** for fast setup and
-  flexible, schema-light iteration — the app even ships with an in-memory MongoDB so it runs with zero
-  database install, and swaps to Atlas/Docker via one env var.
+  flexible, schema-light iteration. The app connects directly to a MongoDB connection string
+  (`MONGODB_URI`, e.g. a free Atlas cluster) and seeds itself on first boot.
 - **Why Socket.IO over plain REST:** the pipeline makes several sequential Gemini calls that take a few
   seconds — a blocking REST request risks timing out. The socket keeps the connection alive and streams
   real progress (`brief → intent → candidates → shortlist`) that drives the narrated loading screen.

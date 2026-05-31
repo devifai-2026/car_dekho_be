@@ -9,7 +9,7 @@ dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 export const config = {
   port: Number(process.env.PORT) || 4000,
-  mongoUri: process.env.MONGODB_URI || '', // empty => in-memory MongoDB
+  mongoUri: process.env.MONGODB_URI || '', // required: MongoDB connection string (e.g. Atlas)
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || '',
     model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
