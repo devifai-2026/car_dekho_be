@@ -1,0 +1,19 @@
+# Render blueprint for the CarDekho backend (Express + Socket.IO + Gemini).
+# Render injects PORT automatically; the server reads it via config.js.
+services:
+  - type: web
+    name: car-dekho-be
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false # set in the Render dashboard (secret)
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
+      - key: MONGODB_URI
+        sync: false # set your Atlas connection string (in-memory Mongo is ephemeral on a dyno)
+      - key: CORS_ORIGIN
+        sync: false # set to your Netlify site URL, e.g. https://car-dekho.netlify.app

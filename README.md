@@ -153,6 +153,26 @@ real scraped-data pipeline (the seed is curated demo data).
 
 ---
 
+## Deployment (Netlify frontend + Render backend)
+
+The frontend and backend deploy as **two separate repos** to different hosts. In production they're on
+different domains, so the frontend targets the backend via `VITE_API_URL` and the backend allows the
+frontend origin via `CORS_ORIGIN`.
+
+**Backend → Render** (repo root = `server/`, uses `render.yaml`):
+1. New Web Service from the backend repo (or "Blueprint" to read `render.yaml`).
+2. Set env vars: `GEMINI_API_KEY` (secret), `MONGODB_URI` (your Atlas URI — the in-memory DB is
+   ephemeral on a dyno), `GEMINI_MODEL` (e.g. `gemini-2.0-flash`), and `CORS_ORIGIN` (your Netlify URL).
+   `PORT` is injected by Render automatically. Build `npm install`, start `npm start`.
+3. Note the service URL, e.g. `https://car-dekho-be.onrender.com`.
+
+**Frontend → Netlify** (repo root = `client/`, uses `netlify.toml`):
+1. New site from the frontend repo. Build `npm run build`, publish `dist` (already in `netlify.toml`).
+2. Add env var **`VITE_API_URL`** = the Render backend URL (build-time; Vite inlines it).
+3. Deploy. Then set the backend's `CORS_ORIGIN` to this Netlify site URL and redeploy the backend.
+
+---
+
 ## Assignment Q&A
 
 ### 1. What did you build, and why? What did you deliberately cut?

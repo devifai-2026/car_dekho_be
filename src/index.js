@@ -14,19 +14,23 @@ async function main() {
   await connectDb();
   await seedIfEmpty();
 
+  // CORS_ORIGIN can lock this to the Netlify URL in production; defaults to "*".
+  const corsOrigin = process.env.CORS_ORIGIN || '*';
+
   const app = express();
-  app.use(cors());
+  app.use(cors({ origin: corsOrigin }));
   app.use(express.json());
   app.use('/api', healthRouter);
   app.use('/api', carsRouter);
   app.use('/api', llmLogsRouter);
 
   const server = http.createServer(app);
-  const io = new SocketServer(server, { cors: { origin: '*' } });
+  const io = new SocketServer(server, { cors: { origin: corsOrigin } });
   registerRecommendSocket(io);
 
-  server.listen(config.port, () => {
-    console.log(`[server] listening on http://localhost:${config.port}`);
+  // Bind to 0.0.0.0 so cloud platforms (Render) can route to it; PORT is injected by the platform.
+  server.listen(config.port, '0.0.0.0', () => {
+    console.log(`[server] listening on port ${config.port}`);
   });
 }
 
