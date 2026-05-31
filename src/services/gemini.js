@@ -40,6 +40,9 @@ export async function callGemini({
       responseMimeType: 'application/json',
       ...(responseSchema ? { responseSchema } : {}),
       temperature,
+      // Disable Gemini 2.5 "thinking" — reasoning tokens were making the
+      // ranking call ~28s. The SDK forwards this key to the API verbatim.
+      thinkingConfig: { thinkingBudget: 0 },
     },
   });
 

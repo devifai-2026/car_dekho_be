@@ -427,17 +427,22 @@ export async function runRecommendation({ text, chips = [] }, hooks = {}) {
     };
   });
 
-  // 5) Prompt 3 — expert's picks (optional upsell, +₹2–5L above the shortlist)
-  const expertPicks = await buildExpertPicks({ requestId, intent, results });
-
-  return {
+  const shortlist = {
     brief,
     intent,
     results,
-    expertPicks,
     overallNote: overallNote || '',
     relaxed,
     noBudget: !intent.budgetMax,
     degraded: briefDegraded || intentDegraded || rankDegraded,
   };
+  // Stream the shortlist NOW so the cars render immediately...
+  hooks.onShortlist?.(shortlist);
+
+  // 5) Prompt 3 — expert's picks (optional upsell, +₹2–5L above the shortlist).
+  // Computed AFTER the shortlist is sent, then delivered separately.
+  const expertPicks = await buildExpertPicks({ requestId, intent, results });
+  hooks.onExpertPicks?.(expertPicks);
+
+  return { ...shortlist, expertPicks };
 }

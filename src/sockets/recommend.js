@@ -26,19 +26,20 @@ export function registerRecommendSocket(io) {
             onBrief: (brief) => socket.emit('brief', brief),
             onIntent: (intent) => socket.emit('intent', intent),
             onCandidates: (info) => socket.emit('candidates', info),
+            // Stream the shortlist as soon as it's ready (cars render now)...
+            onShortlist: (shortlist) => socket.emit('shortlist', shortlist),
+            // ...then the upsell picks arrive a moment later.
+            onExpertPicks: (picks) => socket.emit('expertPicks', picks),
           }
         );
 
-        // Guardrail: off-topic / nonsense / prompt-injection input.
+        // Guardrail: off-topic / nonsense / prompt-injection input (no onShortlist fired).
         if (result.offTopic) {
           socket.emit('error', {
             code: 'OFF_TOPIC',
             message: "I can only help you choose a car. Tell me how you'll use it — who travels, where you drive, and (optionally) a budget.",
           });
-          return;
         }
-
-        socket.emit('shortlist', result);
       } catch (err) {
         console.error('[recommend] failed:', err);
         socket.emit('error', {

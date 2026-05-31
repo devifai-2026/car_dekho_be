@@ -171,6 +171,17 @@ frontend origin via `CORS_ORIGIN`.
 2. Add env var **`VITE_API_URL`** = the Render backend URL (build-time; Vite inlines it).
 3. Deploy. Then set the backend's `CORS_ORIGIN` to this Netlify site URL and redeploy the backend.
 
+**Performance & troubleshooting:**
+- The Gemini calls use `thinkingConfig: { thinkingBudget: 0 }` to disable 2.5-flash's reasoning
+  tokens — this cut the ranking call from ~28s to ~8s. The shortlist is streamed to the client first
+  (`shortlist` event), then Expert's picks arrive separately (`expertPicks`), so cars render at ~12s
+  instead of waiting on the whole chain.
+- **"Loader never finishes"** is almost always a cold start (Render free dynos sleep). The frontend
+  pings `/api/health` on load to warm it, and gives up after 90s with a retry. An external uptime
+  pinger (e.g. cron-job.org → `/api/health` every ~10 min) avoids cold starts entirely.
+- **"My Atlas is empty"** → `MONGODB_URI` isn't set on Render, so the backend used in-memory Mongo.
+  Set it to your Atlas URI; `seedIfEmpty()` populates `car_dekho.cars` (52 docs) on first boot.
+
 ---
 
 ## Assignment Q&A
